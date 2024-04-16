@@ -57,6 +57,11 @@ void MacroProcessor::processFile(const std::string& inputFile, const std::string
         } else if (cmd == ".REPT") {
             std::string expr;
             iss >> expr;
+            if (expr.empty())
+            {
+                errors << "No expression detected for .REPT in line: " << lineCount << std::endl;
+                continue;
+            }
             int count = evaluator.evaluateExpression(expr, constants);
             repeatStack.push({count, {}});
         } else if (cmd == ".ENDM") {
@@ -78,6 +83,8 @@ void MacroProcessor::processFile(const std::string& inputFile, const std::string
             } else {
                 repeatStack.top().lines.insert(repeatStack.top().lines.end(), expanded.begin(), expanded.end());
             }
+        } else if (cmd[0] == '.') {
+            errors << "Syntax error: Unrecognized command in line " << lineCount << ": " << cmd << std::endl;
         } else {
             if (!repeatStack.empty()) {
                 repeatStack.top().lines.push_back(line);
