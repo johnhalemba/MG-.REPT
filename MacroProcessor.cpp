@@ -15,6 +15,7 @@
 struct RepeatBlock {
     int count;
     std::vector<std::string> lines;
+    bool isValid;
 };
 
 void MacroProcessor::processFile(const std::string& inputFile, const std::string& outputFile, const std::string& errorFile) {
@@ -28,19 +29,21 @@ void MacroProcessor::processFile(const std::string& inputFile, const std::string
     std::string line;
 
     int lineCount = 0;
+    bool skipLinesUntilENDM = false;
 
     while (getline(input, line)) {
         ++lineCount;
         line = trim(line);
-        if (line.empty() || line[0] == '#')
-        {
-            ++lineCount;
-            continue;
-        }
+        if (line.empty() || line[0] == '#') continue;
 
         std::istringstream iss(line);
         std::string cmd;
         iss >> cmd;
+
+        if (skipLinesUntilENDM) {
+            if (cmd == ".ENDM") skipLinesUntilENDM = false;
+            continue;
+        }
 
         if (cmd == ".CONST") {
             std::string constDef;
@@ -60,10 +63,18 @@ void MacroProcessor::processFile(const std::string& inputFile, const std::string
             if (expr.empty())
             {
                 errors << "No expression detected for .REPT in line: " << lineCount << std::endl;
+                skipLinesUntilENDM = true;
                 continue;
             }
-            int count = evaluator.evaluateExpression(expr, constants);
-            repeatStack.push({count, {}});
+            try {
+                int count = evaluator.evaluateExpression(expr, constants);
+                repeatStack.push({count, {}, true});
+            } catch (const std::exception& e) {
+                errors << "Error in .REPT expression: " << e.what() << " in line: " << lineCount << std::endl;
+                skipLinesUntilENDM = true; // Start skipping lines
+                continue;
+            }
+
         } else if (cmd == ".ENDM") {
             if (repeatStack.empty()) {
                 errors << "Unmached .ENDM in line: " << lineCount << std::endl;
@@ -83,7 +94,7 @@ void MacroProcessor::processFile(const std::string& inputFile, const std::string
             } else {
                 repeatStack.top().lines.insert(repeatStack.top().lines.end(), expanded.begin(), expanded.end());
             }
-        } else if (cmd[0] == '.') {
+        } else if (cmd[0] == '.' && cmd != ".CONST" && cmd != ".REPT" && cmd != ".ENDM") {
             errors << "Syntax error: Unrecognized command in line " << lineCount << ": " << cmd << std::endl;
         } else {
             if (!repeatStack.empty()) {
