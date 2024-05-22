@@ -11,8 +11,7 @@ int main(int argc, char* argv[]) {
     std::string outputFile = argv[2];
     std::string errorFile = argv[3];
 
-    MacroProcessor processor;
-    processor.processFile(inputFile, outputFile, errorFile);
+    MacroProcessor::processFile(inputFile, outputFile, errorFile);
 
     return 0;
 }

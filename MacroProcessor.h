@@ -9,7 +9,7 @@
 
 class MacroProcessor {
 public:
-    void processFile(const std::string& inputFile, const std::string& outputFile, const std::string& errorFile);
+    static void processFile(const std::string& inputFile, const std::string& outputFile, const std::string& errorFile);
 };
 
 

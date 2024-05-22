@@ -11,11 +11,16 @@ std::vector<std::string> ExpressionEvaluator::infixToRPN (const std::string& exp
     std::stack<char> operators;
     std::vector<std::string> output;
     std::string numberOrConst;
+    bool lastWasOperator = true;
 
     for (char ch : expr) {
         if (std::isdigit(ch) || std::isalpha(ch)) {
             numberOrConst += ch;
+            lastWasOperator = false;
         } else if (isOperator(ch)) {
+            if (lastWasOperator) {
+                throw std::runtime_error("Missing operand.");
+            }
             if (!numberOrConst.empty()) {
                 if (std::isdigit(numberOrConst[0])) {
                     output.push_back(numberOrConst);
@@ -32,7 +37,13 @@ std::vector<std::string> ExpressionEvaluator::infixToRPN (const std::string& exp
                 operators.pop();
             }
             operators.push(ch);
+            lastWasOperator = true;
+        } else if (!std::isspace(ch)) {
+            throw std::runtime_error(std::string("Invalid character: ") + ch);
         }
+    }
+    if(lastWasOperator && !output.empty()) {
+        throw std::runtime_error("Missing operand.");
     }
     if (!numberOrConst.empty()) {
         if (std::isdigit(numberOrConst[0])) {
@@ -46,8 +57,12 @@ std::vector<std::string> ExpressionEvaluator::infixToRPN (const std::string& exp
         numberOrConst.clear();
     }
     while (!operators.empty()) {
-        output.push_back(std::string(1, operators.top()));
-        operators.pop();
+        if (isOperator(operators.top())) {
+            output.push_back(std::string(1, operators.top()));
+            operators.pop();
+        } else {
+            throw std::runtime_error("Invalid operator in stack.");
+        }
     }
     return output;
 }
@@ -56,6 +71,9 @@ int ExpressionEvaluator::evaluateRPN(const std::vector<std::string>& rpn) {
     std::stack<int> values;
     for (const auto& token : rpn) {
         if (isOperator(token[0]) && token.size() == 1) {
+            if (values.size() < 2) {
+                throw std::runtime_error("Missing operand.");
+            }
             int right = values.top(); values.pop();
             int left = values.top(); values.pop();
             switch (token[0]) {
